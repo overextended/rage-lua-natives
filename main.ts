@@ -18,7 +18,7 @@ export class Main {
       case GamesType.GTA:
         return "https://static.cfx.re/natives/natives.json";
       case GamesType.RDR3:
-        return "https://raw.githubusercontent.com/alloc8or/rdr3-nativedb-data/master/natives.json";
+        return "https://raw.githubusercontent.com/VORPCORE/RDR3natives/main/rdr3natives.json";
       case GamesType.Cfx:
         return "https://static.cfx.re/natives/natives_cfx.json";
     }
@@ -30,7 +30,7 @@ export class Main {
   private static getNativeDocsUrl = (gametype: GamesType): string => {
     switch (gametype) {
       case GamesType.RDR3:
-        return "https://alloc8or.re/rdr3/nativedb/?n=";
+        return "https://rdr3natives.com/?_";
       default:
         return "https://docs.fivem.net/natives/?_";
     }
@@ -51,7 +51,7 @@ export class Main {
     let json = Main.getNativeLink(gametype);
 
     if (!json) return;
-  
+
     return new Promise((resolve) => {
       request.get(json, async (error, response, content) => {
         const files = new FilesBuilder(dir);

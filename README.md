@@ -1,11 +1,8 @@
-# JetbrainIDE-CFX.RE
+# rage-lua-natives
 
-[![TypeScript](https://badges.frapsoft.com/typescript/code/typescript.png?v=101)](https://github.com/ellerbrock/typescript-badges/)
-![License](https://img.shields.io/github/license/iTexZoz/JetbrainIDE-CitizenFX.svg)
-![OpenIssue](https://img.shields.io/github/issues/iTexZoz/JetbrainIDE-CitizenFX.svg?style=flat)
-![LastReleases](https://img.shields.io/github/release/iTexZoz/JetbrainIDE-CitizenFX.svg?label=Last%20releases&style=flat)
-
-# Discord : https://discord.gg/Jjb2c8Q (No support)
+![TypeScript](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF)
+![License](https://img.shields.io/github/license/CommunityOx/rage-lua-natives.svg)
+![OpenIssue](https://img.shields.io/github/issues/CommunityOx/rage-lua-natives.svg?style=flat)
 
 ### How to use this tool to generate / regenerate CitizenFX native ?
 
@@ -31,10 +28,8 @@
 ![image](https://user-images.githubusercontent.com/58150973/116157791-32947100-a70b-11eb-8d3b-b9efa5a48784.png)
 
 
-![preview](https://picture.dylan-malandain.me/cmd_RrClO8AUyK.png)
-
-
 ## Special Thank
 
-@CitizenFX (https://github.com/citizenfx/natives)
-@alloc8or (https://github.com/alloc8or/rdr3-nativedb-data)
+@CitizenFX (https://github.com/citizenfx/natives)  
+@alloc8or (https://github.com/alloc8or/rdr3-nativedb-data)  
+@VORPCORE (https://github.com/VORPCORE/RDR3natives/)
