@@ -1,30 +1,38 @@
 {
-  "name": "intelij-natives-citizenfx",
+  "name": "rage-lua-natives",
   "version": "1.0.0",
-  "description": "",
+  "description": "Generates Lua type annotations for FiveM and RedM natives.",
   "main": "main.ts",
   "scripts": {
-    "start": "ts-node main.ts"
+    "start": "bun main.ts"
   },
   "author": "Dylan Malandain",
-  "license": "MIT",
+  "contributors": [
+    "xDope7137 (https://github.com/xDope7137)",
+    "Taso (https://github.com/TasoOneAsia)",
+    "Linden (https://github.com/thelindat)",
+    "BerkieBb (https://github.com/BerkieBb)",
+    "Fraser Watt (https://github.com/FrazzIe)",
+    "ANTOND. (https://github.com/antond15)",
+    "Mohammad AlMahllawi (https://github.com/AlMahllawi)"
+  ],
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/overextended/rage-lua-natives.git"
+  },
   "devDependencies": {
-    "@types/figlet": "^1.7.0",
-    "@types/node": "^14.14.37",
-    "@types/common-tags": "^1.8.1",
-    "@types/fs-extra": "^7.0.0",
-    "@types/request": "^2.48.1",
-    "@types/terminal-kit": "^1.28.0",
-    "ts-node": "^8.1.1",
-    "typescript": "^3.4.5"
+    "@types/bun": "^1.4.3",
+    "@types/common-tags": "^1.8.4",
+    "@types/fs-extra": "^11.0.4",
+    "@types/request": "^2.48.13",
+    "@types/terminal-kit": "^2.5.7",
+    "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@akanass/rx-http-request": "^3.1.0",
-    "chalk": "^2.4.2",
-    "common-tags": "^1.8.0",
-    "figlet": "^1.11.0",
-    "fs-extra": "^8.0.1",
-    "request": "^2.88.0",
-    "terminal-kit": "^1.31.6"
+    "common-tags": "^1.8.2",
+    "fs-extra": "^11.4.1",
+    "request": "^2.88.2",
+    "terminal-kit": "^3.1.4"
   }
 }

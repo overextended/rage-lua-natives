@@ -1,35 +1,88 @@
 # rage-lua-natives
 
 ![TypeScript](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF)
+![Bun](https://shields.io/badge/Bun-000?logo=Bun&logoColor=FFF)
 ![License](https://img.shields.io/github/license/overextended/rage-lua-natives.svg)
-![OpenIssue](https://img.shields.io/github/issues/overextended/rage-lua-natives.svg?style=flat)
+![Open Issues](https://img.shields.io/github/issues/overextended/rage-lua-natives.svg?style=flat)
 
-### How to use this tool to generate / regenerate CitizenFX native ?
+Generates Lua type annotations for FiveM and RedM natives. To use the natives in your editor, install [fivem-lls-addon](https://github.com/overextended/fivem-lls-addon), which ships the generated output as a [Lua Language Server](https://luals.github.io) addon.
 
-# Attention this project requires the installation of NodeJS on the machine where you want to run it
+Each native becomes an annotated stub with its namespace, side (client/server), description, parameters, return types and a link to its documentation page:
 
-1) Git clone projet
-2) Open a terminal in the folder where it is located JetbrainIDE-CitizenFX.
-3) Execute the following command `npm i ` and wait.
-4) Execute `npm install -g ts-node`
-5) Execute `npm install -g typescript`
-6) Once the dependencies install install execute the following command to start the generation of natives `npm run start`
-7) Wait a few minutes, once the generation is finished nothing more to be written to a in your terminal, you will find a new folder named build, it is in this one that you find what you need.
-8) Make a new project in Intellij using EmmyLUA as SDK
-![image](https://user-images.githubusercontent.com/58150973/116157328-68852580-a70a-11eb-8ec9-7c51320f79bd.png)
+```lua
+---**`PLAYER` `client`**
+---[Native Documentation](https://docs.fivem.net/natives/?_0xAFAF86043E5874E9)
+---@param player integer
+---@return boolean
+function IsPlayerFlashingStarsAboutToDrop(player) end
+```
 
-9) Click on "+" for classpath and browse to "build" folder from step 7.
-![image](https://user-images.githubusercontent.com/58150973/116157677-07118680-a70b-11eb-82fe-6e72049d03a5.png)
+## Requirements
 
-![image](https://user-images.githubusercontent.com/58150973/116157701-11cc1b80-a70b-11eb-9b84-5d5df1ca7dac.png)
+- [Bun](https://bun.sh)
 
-10) Done. You can now access all the latest natives for FiveM directly into your code.
+## Usage
 
-![image](https://user-images.githubusercontent.com/58150973/116157791-32947100-a70b-11eb-8d3b-b9efa5a48784.png)
+```sh
+git clone https://github.com/overextended/rage-lua-natives.git
+cd rage-lua-natives
+bun install
+bun start [native sets...]
+```
 
+Pass the native sets to generate. With none, `gta` and `rdr3` are generated. `cfx` is always included.
 
-## Special Thank
+```sh
+bun start            # cfx + gta + rdr3
+bun start gta        # cfx + gta
+bun start rdr3       # cfx + rdr3
+```
 
-@CitizenFX (https://github.com/citizenfx/natives)  
-@alloc8or (https://github.com/alloc8or/rdr3-nativedb-data)  
-@VORPCORE (https://github.com/VORPCORE/RDR3natives/)
+The natives are downloaded and written to `natives/`, one `.lua` file per namespace:
+
+| Set    | Folder               | Contents                     | Source                                                           |
+| ------ | -------------------- | ---------------------------- | ---------------------------------------------------------------- |
+| `cfx`  | `natives/CFX-NATIVE` | CitizenFX natives            | [static.cfx.re](https://static.cfx.re/natives/natives_cfx.json)  |
+| `gta`  | `natives/GTAV`       | GTA V natives (FiveM)        | [static.cfx.re](https://static.cfx.re/natives/natives.json)      |
+| `rdr3` | `natives/RDR3`       | Red Dead Redemption 2 (RedM) | [VORPCORE/RDR3natives](https://github.com/VORPCORE/RDR3natives)  |
+
+Running a set again replaces its previous output.
+
+## GitHub Actions
+
+Other repositories can generate the natives on a schedule with the reusable workflow, which replaces the generated sets in `path` and commits them:
+
+```yaml
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: 0 0 * * SUN
+
+jobs:
+  natives:
+    permissions:
+      contents: write
+    uses: overextended/rage-lua-natives/.github/workflows/generate.yml@main
+    with:
+      native-sets: gta rdr3
+      path: library/natives
+```
+
+| Input            | Default                           | Description                                              |
+| ---------------- | --------------------------------- | -------------------------------------------------------- |
+| `native-sets`    | `gta`                             | Native sets to generate (`cfx` is always included)       |
+| `path`           | `library/natives`                 | Where to write the sets in the calling repository        |
+| `ref`            | `main`                            | Ref of this repository to generate with                  |
+| `commit`         | `true`                            | Commit and push, otherwise upload as a `natives` artifact |
+| `commit-message` | `ci: generate native definitions` | Message of the commit                                    |
+
+To push with something other than `GITHUB_TOKEN`, pass a `token` secret, or `app-id` and `app-private-key` secrets for a GitHub App.
+
+## Credits
+
+- [citizenfx/natives](https://github.com/citizenfx/natives): FiveM and CFX native data
+- [VORPCORE/RDR3natives](https://github.com/VORPCORE/RDR3natives): RedM native data
+- [alloc8or/rdr3-nativedb-data](https://github.com/alloc8or/rdr3-nativedb-data): RDR3 native research
+- This project builds on earlier work, with each one forked from the one before it:
+  - [ImBaphomettt/rage-lua-types](https://github.com/ImBaphomettt/rage-lua-types) by Dylan Malandain, the original tool
+  - [TasoOneAsia/JetbrainIDE-CFX.RE](https://github.com/TasoOneAsia/JetbrainIDE-CFX.RE)

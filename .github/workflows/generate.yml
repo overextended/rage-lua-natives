@@ -1,0 +1,102 @@
+name: Generate natives
+
+on:
+  workflow_call:
+    inputs:
+      native-sets:
+        description: Native sets to generate, space separated (cfx is always included)
+        type: string
+        default: gta
+      path:
+        description: Directory in the calling repository to write the native sets to
+        type: string
+        default: library/natives
+      ref:
+        description: Ref of rage-lua-natives to generate with
+        type: string
+        default: main
+      commit:
+        description: Commit and push the result, otherwise upload it as an artifact
+        type: boolean
+        default: true
+      commit-message:
+        description: Message of the commit
+        type: string
+        default: "ci: generate native definitions"
+    secrets:
+      token:
+        description: Token used to push, defaults to GITHUB_TOKEN
+        required: false
+      app-id:
+        description: GitHub App ID used to push, instead of a token
+        required: false
+      app-private-key:
+        description: Private key of the GitHub App
+        required: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    env:
+      HAS_APP: ${{ secrets.app-id != '' && secrets.app-private-key != '' }}
+    steps:
+      - name: Generate GitHub App token
+        id: app_token
+        if: env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.app-id }}
+          private-key: ${{ secrets.app-private-key }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app_token.outputs.token || secrets.token || github.token }}
+
+      - name: Checkout rage-lua-natives
+        uses: actions/checkout@v7
+        with:
+          repository: overextended/rage-lua-natives
+          ref: ${{ inputs.ref }}
+          path: .rage-lua-natives
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Generate natives
+        working-directory: .rage-lua-natives
+        env:
+          NATIVE_SETS: ${{ inputs.native-sets }}
+        run: |
+          bun install --frozen-lockfile
+          bun start $NATIVE_SETS
+
+      - name: Replace native sets
+        env:
+          OUTPUT_PATH: ${{ inputs.path }}
+        run: |
+          mkdir -p "${OUTPUT_PATH:?}"
+          for dir in .rage-lua-natives/natives/*/; do
+            name=$(basename "$dir")
+            rm -rf "${OUTPUT_PATH:?}/${name:?}"
+            mv "$dir" "$OUTPUT_PATH/$name"
+          done
+          rm -rf .rage-lua-natives
+
+      - name: Commit and push
+        if: inputs.commit
+        uses: EndBug/add-and-commit@v11
+        with:
+          add: ${{ inputs.path }}
+          default_author: github_actions
+          message: ${{ inputs.commit-message }}
+          push: true
+
+      - name: Upload natives
+        if: ${{ !inputs.commit }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: natives
+          path: ${{ inputs.path }}

@@ -2,6 +2,8 @@ import { FilesBuilder } from "./files-builder";
 import { stripIndents } from "common-tags";
 import { GetNativeType, NativeDefinition, NativeParam } from "./types";
 import { terminal as term } from "terminal-kit";
+import { NativeParamOverrides, GlobalParamOverrides } from "./overrides";
+import { NativeSet } from "./enum/NativeSet";
 
 interface TemplateObject {
   desc: string;
@@ -19,6 +21,11 @@ export class ContentGenerate {
   private filesBuilder: FilesBuilder;
 
   /**
+   * Native set being generated, used to scope global overrides
+   */
+  private nativeSet: NativeSet;
+
+  /**
    * Instance of a generated documentation
    */
   private generateDocs: string = "";
@@ -29,7 +36,7 @@ export class ContentGenerate {
   private documentationUrl: string = "https://docs.fivem.net/natives/?_";
 
   /**
-   * Template to generate documentation and shortcuts for native speakers
+   * Template to generate the Lua annotations and function stub of a native
    *
    * @param description
    * @param param
@@ -82,9 +89,11 @@ ${aliases ? `${aliases}\n` : ""}`;
    * Builder allowing the instance of difference objects / utility values for the generation of the template as well as the update of the file to contain the native
    *
    * @param filesBuilder Class instance [[FilesBuilder]]
+   * @param nativeSet Native set being generated
    */
-  constructor(filesBuilder: FilesBuilder) {
+  constructor(filesBuilder: FilesBuilder, nativeSet: NativeSet) {
     this.filesBuilder = filesBuilder;
+    this.nativeSet = nativeSet;
   }
 
   /**
@@ -110,7 +119,7 @@ ${aliases ? `${aliases}\n` : ""}`;
   /**
    * Allows to generate the native template in a procedural way one by one
    *
-   * @param data Request the result of the query to the API of the FiveM natives
+   * @param data Natives JSON, grouped by namespace
    *
    * @return void
    */
@@ -158,7 +167,7 @@ ${aliases ? `${aliases}\n` : ""}`;
         const nativeParams: {
           luaDocs: string;
           params: string;
-        } = this.nativeParams(native);
+        } = this.nativeParams(native, nativeName);
 
         const functionTemplate = `function ${nativeName}(${nativeParams.params}) end`;
 
@@ -192,7 +201,7 @@ ${aliases ? `${aliases}\n` : ""}`;
             `Generated ${namespaceTotal} native declarations for ${namespace}\n`
           );
         })
-        .catch(term.red);
+        .catch((err) => term.red(`${err}\n`));
     }
 
     term.green(`Generated ${nativeTotal} native declarations\n`);
@@ -209,10 +218,9 @@ ${aliases ? `${aliases}\n` : ""}`;
   }
 
   /**
-   * Array containing all natives that have pointers that aren't a return type
+   * Natives whose pointer params are inputs (e.g. a handle passed by reference) rather than extra return values
    */
-  // I didn't know what else to name it
-  private nonReturnPointerNatives: string[] = [
+  private inputPointerNatives: string[] = [
     // Entity*
     "DELETE_ENTITY",
     "SET_ENTITY_AS_NO_LONGER_NEEDED",
@@ -233,7 +241,7 @@ ${aliases ? `${aliases}\n` : ""}`;
     "_START_SHAPE_TEST_SURROUNDING_COORDS",
     // Blip*
     "REMOVE_BLIP",
-    //int*
+    // int*
     "SET_BIT",
     "CLEAR_BIT",
     "SET_SCALEFORM_MOVIE_AS_NO_LONGER_NEEDED",
@@ -243,12 +251,12 @@ ${aliases ? `${aliases}\n` : ""}`;
   ];
 
   /**
-   * Check if the native name is in nonReturnPointerNatives
+   * Check if the native name is in inputPointerNatives
    * @param name Name of the native
    * @returns boolean
    */
-  private isNonReturnPointerNative = (name: string): boolean => {
-    return this.nonReturnPointerNatives.includes(name);
+  private isInputPointerNative = (name: string): boolean => {
+    return this.inputPointerNatives.includes(name);
   };
 
   /**
@@ -261,7 +269,7 @@ ${aliases ? `${aliases}\n` : ""}`;
   };
 
   /**
-   * Returns the return types and params of the native with the pointers removed from the params and moved to the return types (except for non return pointer natives, which are defined in nonReturnPointerNatives or natives with the type "char")
+   * Returns the return types and params of the native with the pointers removed from the params and moved to the return types (except for natives defined in inputPointerNatives or natives with the type "char")
    * @param data Data of the native to convert the params from
    * @returns Array<string[], NativeParam[]>
    */
@@ -288,7 +296,7 @@ ${aliases ? `${aliases}\n` : ""}`;
       if (type.startsWith("const ")) type = type.substring("const ".length);
 
       if (
-        this.isNonReturnPointerNative(data.name) ||
+        this.isInputPointerNative(data.name) ||
         type.substring(-4) === "char"
       ) {
         params[i].type = type;
@@ -302,10 +310,10 @@ ${aliases ? `${aliases}\n` : ""}`;
   };
 
   /**
-   * `nativeName` is used to format and generate the name of the native return by the FiveM api
+   * `nativeName` is used to format and generate the name of the native returned by the natives JSON
    *
-   * @param data Request the result of the query to the API of the FiveM natives
-   * @param natives Request the result of the query to the API of the FiveM natives data[category]
+   * @param data Definition of the native
+   * @param natives Hash of the native, used when it has no name
    *
    * @return String
    */
@@ -342,17 +350,18 @@ ${aliases ? `${aliases}\n` : ""}`;
   };
 
   /**
-   * "nativeParams" Is used to generate the parameters of the native wish and its LUA documentation.
+   * "nativeParams" Is used to generate the parameters of the native and their Lua annotations.
    *
-   * @param data Request the result of the query to the API of the FiveM natives
+   * @param data Definition of the native
    *
    * @return JSON<String luaDocs, String params, String paramsWithType>
    */
   private nativeParams = (
-    data: NativeDefinition
+    data: NativeDefinition,
+    nativeName: string
   ): { luaDocs: string; params: string } => {
     /**
-     * "luaDocs" Allows to save the generation of LUA documentation and return it
+     * "luaDocs" Allows to save the generation of Lua annotations and return it
      *
      * "params" Allows to save the generation of the native parameters and to return it.
      */
@@ -365,13 +374,19 @@ ${aliases ? `${aliases}\n` : ""}`;
 
       if (nativeParam.type.includes("*")) continue;
 
-      const convNativeType = GetNativeType(nativeParam.type, true);
+      const nativeOverrides = NativeParamOverrides[this.nativeSet];
+      const override = nativeOverrides?.[data.name]?.[i] || nativeOverrides?.[nativeName]?.[i];
+      const paramName = override?.name || nativeParam.name;
+      const convNativeType = override?.type || GlobalParamOverrides[this.nativeSet]?.[nativeParam.name] || GetNativeType(nativeParam.type, true);
+
+      const defaultValue = override?.defaultValue;
+      const isOptional = defaultValue !== undefined;
 
       luaDocs += `\n---@param ${this.fieldToReplace(
-        nativeParam.name
-      )} ${convNativeType}`;
+        paramName
+      )}${isOptional ? "?" : ""} ${convNativeType}${isOptional && defaultValue !== null ? ` [default: ${defaultValue}]` : ""}`;
       params +=
-        (paramPos != 0 ? ", " : "") + this.fieldToReplace(nativeParam.name);
+        (paramPos != 0 ? ", " : "") + this.fieldToReplace(paramName);
       paramPos++;
     }
 
@@ -379,11 +394,14 @@ ${aliases ? `${aliases}\n` : ""}`;
   };
 
   /**
-   * `nativeDescription` Allows to check if a description exists on the native wish and therefore returned a different result according to the natives
+   * `nativeDescription` Allows to check if a description exists on the native and therefore returns a different result according to the natives
    *
-   * @param data Request the result of the query to the API of the FiveM natives
+   * @param description Description of the native
+   * @param hash Hash of the native, appended to the documentation url
+   * @param namespace Namespace of the native
+   * @param apiset Side the native runs on (client/server)
    *
-   * @return String Returns the description of the native or a prefect text indicating the lack of official description
+   * @return String Returns the description of the native or a predefined text indicating the lack of official description
    */
   private nativeDescription = (
     description: string,
@@ -394,15 +412,13 @@ ${aliases ? `${aliases}\n` : ""}`;
     let baseDesc = description
       ? description.replace(/^/gm, "---")
       : "---This native does not have an official description.";
-
-    // Attach natives url;
     return `---**\`${namespace}\` \`${apiset}\`**  \n---[Native Documentation](${this.documentationUrl}${hash})  \n${baseDesc}`;
   };
 
   /**
    * `nativeUsage` Allows to automatically generate the native's usage pattern with all the details necessary for an instant understanding
    *
-   * @param data Request the result of the query to the API of the FiveM natives
+   * @param data Definition of the native
    * @param nativeParams Results generated from the nativeParams() function of the class [[ContentGenerate]]
    *
    * @return string Returns the predefined pattern

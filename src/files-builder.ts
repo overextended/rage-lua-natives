@@ -33,7 +33,7 @@ export class FilesBuilder {
   };
 
   /**
-   * The public category function allows you to pre-generate the .lua files that will contain the native complements for your [Jetbrain IDE](https://www.jetbrains.com/).
+   * The public category function allows you to pre-generate the .lua files that will contain the native type annotations.
    *
    * @param data
    *
@@ -57,16 +57,14 @@ export class FilesBuilder {
   /**
    * Allows to update a file while keeping the values present in this file previously.
    *
-   * @param stats
    * @param files Name of the currently updated file
    * @param data Data to be inserted in the file
-   * @param nativeName Name of the native FiveM
    *
    * @return Promise<void | string>
    */
   public update = (
-    files: String,
-    data: String,
+    files: string,
+    data: string,
   ): Promise<void | string> => {
     return new Promise((resolve, reject) => {
       const fileName = `${this.directory}/${files}.lua`;

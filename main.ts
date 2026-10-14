@@ -1,8 +1,7 @@
 import * as request from "request";
 import { FilesBuilder } from "./src/files-builder";
 import { ContentGenerate } from "./src/content-generate";
-import * as figlet from "figlet";
-import { GamesType } from "./src/enum/GamesType";
+import { NativeSet } from "./src/enum/NativeSet";
 import { terminal as term } from "terminal-kit";
 
 /**
@@ -10,26 +9,26 @@ import { terminal as term } from "terminal-kit";
  */
 export class Main {
   /**
-   * @param gametype
+   * @param nativeSet
    */
-  private static getNativeLink = (gametype: GamesType): string => {
-    switch (gametype) {
+  private static getNativeLink = (nativeSet: NativeSet): string => {
+    switch (nativeSet) {
       default:
-      case GamesType.GTA:
+      case NativeSet.GTA:
         return "https://static.cfx.re/natives/natives.json";
-      case GamesType.RDR3:
+      case NativeSet.RDR3:
         return "https://raw.githubusercontent.com/VORPCORE/RDR3natives/main/rdr3natives.json";
-      case GamesType.Cfx:
+      case NativeSet.Cfx:
         return "https://static.cfx.re/natives/natives_cfx.json";
     }
   };
 
   /**
-   * @param gametype
+   * @param nativeSet
    */
-  private static getNativeDocsUrl = (gametype: GamesType): string => {
-    switch (gametype) {
-      case GamesType.RDR3:
+  private static getNativeDocsUrl = (nativeSet: NativeSet): string => {
+    switch (nativeSet) {
+      case NativeSet.RDR3:
         return "https://rdr3natives.com/?_";
       default:
         return "https://docs.fivem.net/natives/?_";
@@ -37,18 +36,18 @@ export class Main {
   };
 
   /**
-   * Startup logicNom de la native fivem
+   * Startup logic
    *
    * @param dir Location of the file where the project will be built
    *
-   * @param gametype
+   * @param nativeSet
    * @return void
    */
   public static onEnable = (
     dir: string,
-    gametype: GamesType
+    nativeSet: NativeSet
   ): Promise<void> => {
-    let json = Main.getNativeLink(gametype);
+    let json = Main.getNativeLink(nativeSet);
 
     if (!json) return;
 
@@ -63,14 +62,14 @@ export class Main {
 
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        const builder = new ContentGenerate(files).setDocumentationUrl(
-          Main.getNativeDocsUrl(gametype)
+        const builder = new ContentGenerate(files, nativeSet).setDocumentationUrl(
+          Main.getNativeDocsUrl(nativeSet)
         );
 
         try {
           await builder.generateTemplate(json);
         } catch (err) {
-          term.red(err);
+          term.red(`${err}\n`);
         } finally {
           resolve();
         }
@@ -86,7 +85,7 @@ export class Main {
    * @return void
    */
   public static onFolderGenerate = (response: void) => {
-    term.cyan("Create build directory successfully : " + response);
+    term.cyan("Create output directory successfully : " + response + "\n");
   };
 
   /**
@@ -94,7 +93,7 @@ export class Main {
    *
    * @param stats
    * @param filename Name of the updated file
-   * @param nativename Name of the native fivem
+   * @param nativename Name of the native
    *
    * @return void
    */
@@ -109,26 +108,30 @@ export class Main {
   };
 }
 
-figlet("JetBrainIDE-CitizenFX", (err, data) => {
-  term.blue(data);
-  term.red("\n Dylan Malandain - @iTexZoz \n");
-});
-
 term.cyan(
-  "Welcome to the native completion generator tool for Jetbrain IDEs for cfx.re projects.\n"
+  "Generating Lua type annotations for FiveM and RedM natives.\n"
 );
-// term.cyan("Please select the game concerned.\n");
 
-// let items = [
-//   "1. (FiveM) GTA V",
-//   "2. (RedM) Red Dead Redemption 2",
-//   "3. CFX (Is Available for RedM && FiveM)",
-// ];
+const nativeSets: Record<string, [string, NativeSet]> = {
+  cfx: ["natives/CFX-NATIVE", NativeSet.Cfx],
+  gta: ["natives/GTAV", NativeSet.GTA],
+  rdr3: ["natives/RDR3", NativeSet.RDR3],
+};
+
+const selected = process.argv.slice(2).map((arg) => arg.toLowerCase());
+const unknown = selected.filter((arg) => !(arg in nativeSets));
+
+if (unknown.length) {
+  term.red(
+    `Unknown native set: ${unknown.join(", ")}. Available: ${Object.keys(nativeSets).join(", ")}\n`
+  );
+  process.exit(1);
+}
 
 (async () => {
-  await Main.onEnable("build/cfx/GTAV", GamesType.GTA);
-  await Main.onEnable("build/cfx/RDR3", GamesType.RDR3);
-  await Main.onEnable("build/cfx/CFX-NATIVE", GamesType.Cfx);
+  for (const nativeSet of new Set(["cfx", ...(selected.length ? selected : ["gta", "rdr3"])])) {
+    await Main.onEnable(...nativeSets[nativeSet]);
+  }
 
   process.exit();
 })();
